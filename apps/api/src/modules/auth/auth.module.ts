@@ -6,7 +6,12 @@ import { PrismaService } from '../../common/prisma.service';
 
 @Global()
 @Module({
-  imports: [JwtModule.register({})],
+  imports: [
+    JwtModule.register({
+      secret: process.env.JWT_ACCESS_SECRET,
+      signOptions: { expiresIn: process.env.JWT_ACCESS_TTL || '15m' },
+    }),
+  ],
   controllers: [AuthController],
   providers: [AuthService, PrismaService],
   exports: [JwtModule, AuthService],
