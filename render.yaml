@@ -23,7 +23,7 @@ services:
     healthCheckPath: /api/v1/health
     buildCommand: pnpm install && pnpm --filter @corpo-onda/api prisma:generate && pnpm --filter @corpo-onda/api build
     preDeployCommand: pnpm --filter @corpo-onda/api prisma:migrate
-    startCommand: pnpm --filter @corpo-onda/api start
+    startCommand: cd apps/api && node dist/src/main.js
     envVars:
       - key: NODE_VERSION
         value: "22.11.0"
