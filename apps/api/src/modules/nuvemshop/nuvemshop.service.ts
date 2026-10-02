@@ -35,12 +35,14 @@ export class NuvemshopService implements OnModuleInit, OnModuleDestroy {
   ) {}
 
   onModuleInit(): void {
-    if (this.config.isOperational) {
-      // Worker simples do outbox (a cada 30s). Suficiente para volume de PME em 1 instância.
+    if (this.config.canWrite) {
+      // Worker do outbox só roda com a ESCRITA habilitada (publica estoque na loja).
       this.outboxTimer = setInterval(() => {
         this.processOutbox(20).catch((e) => this.logger.error(`Outbox: ${String(e)}`));
       }, 30_000);
-      this.logger.log('Integração Nuvemshop ativa. Worker de outbox iniciado.');
+      this.logger.log('Integração Nuvemshop ATIVA (leitura + escrita). Worker de outbox iniciado.');
+    } else if (this.config.isOperational) {
+      this.logger.log('Integração Nuvemshop em modo SOMENTE LEITURA (WRITE_ENABLED=false). Nada será escrito na loja.');
     }
   }
   onModuleDestroy(): void {
@@ -100,7 +102,11 @@ export class NuvemshopService implements OnModuleInit, OnModuleDestroy {
    * Idempotência por (pedido + variante + tipo), então reprocessar o mesmo webhook é seguro.
    */
   async processOrderEvent(event: string, externalOrderId: string): Promise<void> {
-    if (!this.config.isOperational) return;
+    // Baixa/devolução por webhook só ocorre com a ESCRITA habilitada.
+    if (!this.config.canWrite) {
+      this.logger.log(`Webhook ${event} (${externalOrderId}) recebido, mas escrita desligada — nenhum movimento aplicado.`);
+      return;
+    }
     const orgId = await this.resolveOrgId();
     if (!orgId) return;
 
@@ -167,8 +173,9 @@ export class NuvemshopService implements OnModuleInit, OnModuleDestroy {
   }
 
   /** Drena jobs PUBLISH_STOCK do outbox, enviando a quantidade disponível ao canal. */
-  async processOutbox(limit = 20): Promise<{ processed: number; failed: number }> {
-    if (!this.config.isOperational) return { processed: 0, failed: 0 };
+  async processOutbox(limit = 20): Promise<{ processed: number; failed: number; skipped?: string }> {
+    // Escrita desligada => não publica nada; jobs permanecem PENDING para quando a escrita for habilitada.
+    if (!this.config.canWrite) return { processed: 0, failed: 0, skipped: 'write-disabled' };
     const jobs = await this.prisma.outboxJob.findMany({
       where: { type: 'PUBLISH_STOCK', status: 'PENDING', runAfter: { lte: new Date() } },
       orderBy: { runAfter: 'asc' },
@@ -234,6 +241,8 @@ export class NuvemshopService implements OnModuleInit, OnModuleDestroy {
     return {
       enabled: this.config.enabled,
       operational: this.config.isOperational,
+      writeEnabled: this.config.writeEnabled,
+      mode: this.config.canWrite ? 'leitura+escrita' : (this.config.isOperational ? 'somente-leitura' : 'inativa'),
       storeId: this.config.storeId ? `***${this.config.storeId.slice(-3)}` : null,
       apiVersion: this.config.apiVersion,
     };

@@ -20,6 +20,14 @@ export class NuvemshopConfig {
   get enabled(): boolean {
     return (process.env.NUVEMSHOP_ENABLED || 'false').toLowerCase() === 'true';
   }
+  /**
+   * Trava de ESCRITA, separada da leitura. Padrão: desligada.
+   * Com NUVEMSHOP_ENABLED=true e WRITE_ENABLED=false, a integração só LÊ
+   * (sync-mappings, status) — nunca publica estoque nem dá baixa por webhook.
+   */
+  get writeEnabled(): boolean {
+    return (process.env.NUVEMSHOP_WRITE_ENABLED || 'false').toLowerCase() === 'true';
+  }
   get storeId(): string {
     return process.env.NUVEMSHOP_STORE_ID || '';
   }
@@ -39,12 +47,17 @@ export class NuvemshopConfig {
     return `https://api.tiendanube.com/${this.apiVersion}/${this.storeId}`;
   }
 
-  /** Verdadeiro só quando a flag está ligada E as credenciais mínimas existem. */
+  /** Verdadeiro só quando a flag está ligada E as credenciais mínimas existem (habilita LEITURA). */
   get isOperational(): boolean {
     const ok = this.enabled && !!this.storeId && !!this.accessToken;
     if (this.enabled && !ok) {
       this.logger.warn('NUVEMSHOP_ENABLED=true, mas faltam STORE_ID/ACCESS_TOKEN. Integração inativa.');
     }
     return ok;
+  }
+
+  /** Verdadeiro só quando a leitura está operacional E a trava de escrita está ligada. */
+  get canWrite(): boolean {
+    return this.isOperational && this.writeEnabled;
   }
 }
