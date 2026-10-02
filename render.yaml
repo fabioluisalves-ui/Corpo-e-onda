@@ -1,6 +1,11 @@
 # Blueprint do Render — Corpo & Onda Estoque
 # Provisiona: 1 banco PostgreSQL + serviço da API (NestJS) + serviço do site (Next.js).
 # Uso: no Render → New → Blueprint → aponte para este repositório.
+#
+# Observações importantes (ver README de deploy):
+# - Segredos (sync:false) são preenchidos no painel, nunca versionados.
+# - CORS_ORIGINS e NEXT_PUBLIC_API_URL cruzam as URLs dos dois serviços:
+#   preencha-os após o primeiro deploy e faça um redeploy do site.
 
 databases:
   - name: corpo-onda-db
@@ -13,11 +18,11 @@ services:
   - type: web
     name: corpo-onda-api
     runtime: node
-    plan: starter
+    plan: starter # sem "cold start"; ~US$7/mês
     autoDeploy: true
     healthCheckPath: /api/v1/health
-    buildCommand: pnpm install --no-frozen-lockfile && cd apps/api && pnpm prisma:generate && pnpm build
-    preDeployCommand: cd apps/api && pnpm prisma:migrate
+    buildCommand: pnpm install && pnpm --filter @corpo-onda/api prisma:generate && pnpm --filter @corpo-onda/api build
+    preDeployCommand: pnpm --filter @corpo-onda/api prisma:migrate
     startCommand: cd apps/api && node dist/src/main.js
     envVars:
       - key: NODE_VERSION
@@ -47,8 +52,8 @@ services:
     runtime: node
     plan: starter
     autoDeploy: true
-    buildCommand: pnpm install --no-frozen-lockfile && cd apps/web && pnpm build
-    startCommand: cd apps/web && pnpm start
+    buildCommand: pnpm install && pnpm --filter @corpo-onda/web build
+    startCommand: pnpm --filter @corpo-onda/web start
     envVars:
       - key: NODE_VERSION
         value: "22.11.0"
