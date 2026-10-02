@@ -17,11 +17,11 @@ export class ReportsController {
     const rows = await this.prisma.stockBalance.findMany({
       where: { orgId: u.orgId }, include: { variant: { include: { product: true } } },
     });
-    const mapped = rows.map(r => ({
+    const mapped = rows.map((r: (typeof rows)[number]) => ({
       sku: r.variant.sku, product: r.variant.product.name, color: r.variant.color, size: r.variant.size,
       onHand: r.onHand, reserved: r.reserved, available: r.onHand - r.reserved,
     }));
-    return lowStock === 'true' ? mapped.filter(m => m.available <= th) : mapped;
+    return lowStock === 'true' ? mapped.filter((m: (typeof mapped)[number]) => m.available <= th) : mapped;
   }
 
   @Get('stock.csv')
@@ -31,7 +31,7 @@ export class ReportsController {
       where: { orgId: u.orgId }, include: { variant: { include: { product: true } } },
     });
     const header = 'sku,produto,cor,tamanho,on_hand,reserved,available';
-    const lines = rows.map(r => [
+    const lines = rows.map((r: (typeof rows)[number]) => [
       r.variant.sku, r.variant.product.name, r.variant.color ?? '', r.variant.size ?? '',
       r.onHand, r.reserved, r.onHand - r.reserved,
     ].map(v => `"${String(v).replace(/"/g,'""')}"`).join(','));

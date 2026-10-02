@@ -177,7 +177,7 @@ export class InventoryService {
       orgId: actor.orgId,
       locationId,
       kitVariantId: kit.id,
-      components: components.map((c) => ({ variantId: c.componentId, quantityPerKit: c.quantityPerKit })),
+      components: components.map((c: (typeof components)[number]) => ({ variantId: c.componentId, quantityPerKit: c.quantityPerKit })),
       quantity: input.quantity,
       userId: actor.userId,
       origin: 'KIT_UI',
@@ -190,7 +190,7 @@ export class InventoryService {
   async virtualKitAvailability(orgId: string, kitVariantId: string): Promise<number> {
     const components = await this.prisma.kitComponent.findMany({ where: { kitVariantId } });
     const withAvail = await Promise.all(
-      components.map(async (c) => {
+      components.map(async (c: (typeof components)[number]) => {
         const bal = await this.prisma.stockBalance.aggregate({
           where: { orgId, variantId: c.componentId },
           _sum: { onHand: true, reserved: true },
