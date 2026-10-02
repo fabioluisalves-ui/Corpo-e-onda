@@ -6,7 +6,8 @@ import helmet from 'helmet';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, { bufferLogs: false });
+  // rawBody: true expõe req.rawBody (Buffer) para validar o HMAC dos webhooks Nuvemshop.
+  const app = await NestFactory.create(AppModule, { bufferLogs: false, rawBody: true });
 
   app.use(helmet());
   app.setGlobalPrefix('api');

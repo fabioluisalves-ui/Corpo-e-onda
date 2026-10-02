@@ -1,18 +1,35 @@
-import { CommerceProvider, ExternalVariant } from './commerce-provider.interface';
+import {
+  CommerceProvider,
+  ExternalOrder,
+  ExternalVariant,
+  PublishStockInput,
+} from './commerce-provider.interface';
 
-/** Provider simulado — NUNCA faz chamadas externas. Usado enquanto a flag Nuvemshop está desativada. */
+/** Provider simulado — NUNCA faz chamadas externas. Usado quando a flag Nuvemshop está desligada. */
 export class MockCommerceProvider implements CommerceProvider {
   readonly name = 'mock';
-  private published: Array<{ externalVariantId: string; available: number }> = [];
+  private published: PublishStockInput[] = [];
 
   async listVariants(): Promise<ExternalVariant[]> {
     return [
       { externalProductId: '1001', externalVariantId: '2001', sku: 'TOP-MARE-AZC-P', gtin: null },
     ];
   }
-  async publishStock(input: { externalVariantId: string; available: number }): Promise<void> {
-    this.published.push({ externalVariantId: input.externalVariantId, available: input.available });
+  async publishStock(input: PublishStockInput): Promise<void> {
+    this.published.push(input);
   }
-  verifyWebhook(): boolean { return true; }
-  getPublished() { return this.published; }
+  async getOrder(externalOrderId: string): Promise<ExternalOrder> {
+    return {
+      externalOrderId,
+      status: 'open',
+      paymentStatus: 'paid',
+      items: [{ externalVariantId: '2001', sku: 'TOP-MARE-AZC-P', quantity: 1 }],
+    };
+  }
+  verifyWebhook(): boolean {
+    return true;
+  }
+  getPublished(): PublishStockInput[] {
+    return this.published;
+  }
 }

@@ -90,6 +90,52 @@ export class InventoryService {
     return { movement, variant };
   }
 
+  /** Baixa de estoque originada de uma venda na Nuvemshop (webhook). Movimento de sistema. */
+  async nuvemshopSale(
+    actor: { orgId: string; userId?: string | null },
+    input: { variantId: string; quantity: number; idempotencyKey?: string },
+  ) {
+    const locationId = await this.defaultLocationId(actor.orgId);
+    const movement = await this.engine.applyMovement({
+      orgId: actor.orgId,
+      locationId,
+      variantId: input.variantId,
+      quantity: input.quantity,
+      userId: actor.userId ?? null,
+      origin: 'NUVEMSHOP_WEBHOOK',
+      idempotencyKey: input.idempotencyKey,
+      type: MovementType.NUVEMSHOP_SALE,
+    });
+    await this.afterMovement(
+      { orgId: actor.orgId, userId: (actor.userId ?? null) as unknown as string },
+      input.variantId, locationId, 'NUVEMSHOP_SALE', movement.id,
+    );
+    return { movement };
+  }
+
+  /** Devolução por cancelamento de pedido na Nuvemshop. */
+  async customerReturn(
+    actor: { orgId: string; userId?: string | null },
+    input: { variantId: string; quantity: number; idempotencyKey?: string },
+  ) {
+    const locationId = await this.defaultLocationId(actor.orgId);
+    const movement = await this.engine.applyMovement({
+      orgId: actor.orgId,
+      locationId,
+      variantId: input.variantId,
+      quantity: input.quantity,
+      userId: actor.userId ?? null,
+      origin: 'NUVEMSHOP_WEBHOOK',
+      idempotencyKey: input.idempotencyKey,
+      type: MovementType.CUSTOMER_RETURN,
+    });
+    await this.afterMovement(
+      { orgId: actor.orgId, userId: (actor.userId ?? null) as unknown as string },
+      input.variantId, locationId, 'CUSTOMER_RETURN', movement.id,
+    );
+    return { movement };
+  }
+
   async adjustment(
     actor: Actor,
     input: {
